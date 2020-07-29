@@ -1,25 +1,37 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
 import { StyleSheet, View, ImageBackground } from "react-native";
-import { Audio } from "expo-av";
+import { Audio, AVPlaybackStatus } from "expo-av";
 
 import Button from "./Button";
 
+const alert = require("./assets/octoalert.mp3");
+const soundObject = new Audio.Sound();
+
 export default function App() {
-  const soundObject = new Audio.Sound();
+  const [isLoaded, setIsLoaded] = useState(false);
+  const [isPlaying, setIsPlaying] = useState(false);
+
+  const onPlaybackStatusUpdate = (status: AVPlaybackStatus) => {
+    setIsLoaded(status && status.isLoaded ? true : false);
+    setIsPlaying(status && status.isLoaded && status.isPlaying ? true : false);
+  };
+
+  useEffect(() => {
+    const loadSound = async () => {
+      soundObject.loadAsync(alert);
+      soundObject.setOnPlaybackStatusUpdate(onPlaybackStatusUpdate);
+    };
+    loadSound();
+  }, []);
 
   const playSound = async () => {
-    const sound = await soundObject.getStatusAsync();
-
-    if (sound && sound.isLoaded && sound.isPlaying) {
-      soundObject.stopAsync();
-      return;
+    if (isPlaying) {
+      await soundObject.stopAsync();
+    } else {
+      if (isLoaded) {
+        await soundObject.playAsync();
+      }
     }
-
-    if (sound && !sound.isLoaded) {
-      await soundObject.loadAsync(require("./assets/octoalert.mp3"));
-    }
-
-    await soundObject.playAsync();
   };
 
   return (
@@ -28,7 +40,7 @@ export default function App() {
         source={require("./assets/background.png")}
         style={styles.background}
       >
-        <Button onPress={playSound} />
+        <Button onPress={playSound} isPlaying={isPlaying} />
       </ImageBackground>
     </View>
   );
